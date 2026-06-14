@@ -129,37 +129,39 @@ PORT=5001 python app.py
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Flask Backend (app.py)                │
-│                                                         │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │            Incident Commander Orchestrator         │  │
-│  │                                                   │  │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────┐  │  │
-│  │  │   Logs   │ │ Metrics  │ │  Events  │ │Cost │  │  │
-│  │  │  Agent   │ │  Agent   │ │  Agent   │ │Agent│  │  │
-│  │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──┬──┘  │  │
-│  │       │             │            │           │     │  │
-│  │       └─────────────┴────────────┴───────────┘     │  │
-│  │                      │                             │  │
-│  │              ┌───────▼────────┐                    │  │
-│  │              │  Gemini Client │                    │  │
-│  │              │  (LLM / RCA)  │                    │  │
-│  │              └────────────────┘                    │  │
-│  └───────────────────────────────────────────────────┘  │
-│                         │                               │
-│  ┌──────────────────────▼────────────────────────────┐  │
-│  │   kubectl  /  Demo Data Simulator                 │  │
-│  └───────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  Dashboard (HTML/JS) │
-│  Glassmorphism UI    │
-│  Chart.js Telemetry  │
-└─────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["🖥️ Dashboard (HTML/JS/CSS)"]
+        UI["Glassmorphism UI"]
+        Charts["Chart.js Telemetry"]
+        Console["Interactive Console"]
+    end
+
+    subgraph Backend["⚙️ Flask Backend (app.py)"]
+        API["REST API Endpoints"]
+
+        subgraph Orchestrator["🤖 Incident Commander Orchestrator"]
+            direction LR
+            Logs["📋 Logs Agent"]
+            Metrics["📊 Metrics Agent"]
+            Events["📅 Events Agent"]
+            Cost["💰 Cost Agent"]
+        end
+
+        Gemini["🧠 Gemini Client (LLM / RCA)"]
+    end
+
+    subgraph Data["📡 Data Sources"]
+        direction LR
+        Kubectl["kubectl (Live Cluster)"]
+        Demo["Demo Data Simulator"]
+    end
+
+    Frontend <-->|"HTTP/JSON"| API
+    API --> Orchestrator
+    Logs & Metrics & Events & Cost -->|"Parallel Execution"| Gemini
+    Gemini -->|"RCA Report"| API
+    Orchestrator --> Data
 ```
 
 ---
