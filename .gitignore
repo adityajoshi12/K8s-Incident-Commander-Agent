@@ -1,0 +1,55 @@
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables (contains API keys!)
+.env
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+sdist/
+wheels/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Gemini
+.gemini/
+
+# Flask / instance
+instance/
+*.db
+
+# Pytest / testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
+*.log
+.tox/
+.mypy_cache/

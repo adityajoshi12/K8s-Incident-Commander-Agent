@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Incident Commander | Platform Engineering Agent</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">
+            <div class="logo-glow"></div>
+            <i class="fa-solid fa-shield-halved logo-icon"></i>
+            <h1>K8s Incident Commander</h1>
+        </div>
+        <div class="controls-bar">
+            <!-- Mode Toggle -->
+            <div class="mode-toggle-container" style="display: none;">
+                <span class="mode-label">Mode:</span>
+                <div class="toggle-button" id="mode-toggle">
+                    <div class="toggle-switch demo-active"></div>
+                    <span class="toggle-text active" data-mode="demo">Demo Cluster</span>
+                    <span class="toggle-text" data-mode="live">Live Cluster</span>
+                </div>
+            </div>
+            <!-- Namespace Selector -->
+            <div class="selector-container">
+                <label for="ns-select">Namespace:</label>
+                <select id="ns-select" class="custom-select"></select>
+            </div>
+            <!-- Pod Selector -->
+            <div class="selector-container">
+                <label for="pod-select">Pod:</label>
+                <select id="pod-select" class="custom-select"></select>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Sidebar - Cluster Health & Chat Console -->
+        <section class="left-panel">
+            <!-- Cluster Pod Health Grid -->
+            <div class="card status-card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-network-wired"></i> Cluster Workloads</h2>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span class="live-badge" id="live-badge" title="Auto-refreshing every 5s"><i class="fa-solid fa-circle"></i> LIVE</span>
+                        <span class="pulse-indicator green" id="cluster-indicator"></span>
+                    </div>
+                </div>
+                <div class="pods-table-wrapper">
+                    <table class="pods-table" id="pods-table">
+                        <thead>
+                            <tr>
+                                <th>Pod Name</th>
+                                <th>Ready</th>
+                                <th>Status</th>
+                                <th>Restarts</th>
+                                <th>Age</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pods-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Command Center Chat Console -->
+            <div class="card chat-card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-terminal"></i> Command Center</h2>
+                </div>
+                <div class="chat-history" id="chat-history">
+                    <div class="chat-message system">
+                        <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                        <div class="message-content">
+                            <p><strong>Incident Commander:</strong> Standing by. Click the query below or type a custom command to investigate an unhealthy workload.</p>
+                            <div class="quick-suggests">
+                                <button class="suggest-btn" data-query="Why are my pods restarting?">
+                                    "Why are my pods restarting?"
+                                </button>
+                                <button class="suggest-btn" data-query="Audit workload resource limits and utilization">
+                                    "Audit workload resource limits and utilization"
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <form class="chat-input-area" id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Ask the Incident Commander (e.g., Why are my pods restarting?)..." required autocomplete="off">
+                    <button type="submit" class="send-btn" id="send-btn">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Main Body - Agent Orchestrator Visualizer & RCA Output -->
+        <section class="right-panel">
+            <!-- Parallel Agents Orchestrator Panel -->
+            <div class="card orchestrator-card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-server"></i> Multi-Agent Orchestrator</h2>
+                    <span class="duration-badge" id="duration-badge">Idle</span>
+                </div>
+                <div class="agents-grid">
+                    <!-- Logs Agent -->
+                    <div class="agent-box" id="agent-logs">
+                        <div class="agent-avatar"><i class="fa-solid fa-file-invoice"></i></div>
+                        <div class="agent-info">
+                            <h3>Logs Agent</h3>
+                            <p class="agent-status">Inactive</p>
+                        </div>
+                        <div class="agent-loader"></div>
+                    </div>
+                    <!-- Metrics Agent -->
+                    <div class="agent-box" id="agent-metrics">
+                        <div class="agent-avatar"><i class="fa-solid fa-chart-line"></i></div>
+                        <div class="agent-info">
+                            <h3>Metrics Agent</h3>
+                            <p class="agent-status">Inactive</p>
+                        </div>
+                        <div class="agent-loader"></div>
+                    </div>
+                    <!-- Events Agent -->
+                    <div class="agent-box" id="agent-events">
+                        <div class="agent-avatar"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="agent-info">
+                            <h3>Events Agent</h3>
+                            <p class="agent-status">Inactive</p>
+                        </div>
+                        <div class="agent-loader"></div>
+                    </div>
+                    <!-- Cost Agent -->
+                    <div class="agent-box" id="agent-cost">
+                        <div class="agent-avatar"><i class="fa-solid fa-sack-dollar"></i></div>
+                        <div class="agent-info">
+                            <h3>Cost Agent</h3>
+                            <p class="agent-status">Inactive</p>
+                        </div>
+                        <div class="agent-loader"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Panel (RCA Report vs Raw Agent Data) -->
+            <div class="tabs-container">
+                <div class="tab-headers">
+                    <button class="tab-header active" data-tab="rca"><i class="fa-solid fa-file-shield"></i> RCA Report</button>
+                    <button class="tab-header" data-tab="metrics"><i class="fa-solid fa-chart-area"></i> Telemetry & Metrics</button>
+                    <button class="tab-header" data-tab="logs"><i class="fa-solid fa-code"></i> Container Logs</button>
+                    <button class="tab-header" data-tab="cost"><i class="fa-solid fa-coins"></i> Cost Impact</button>
+                </div>
+
+                <div class="tab-contents">
+                    <!-- Tab: RCA Report -->
+                    <div class="tab-content active" id="tab-rca">
+                        <div class="rca-placeholder" id="rca-placeholder">
+                            <i class="fa-solid fa-shield-cat placeholder-icon"></i>
+                            <p>No investigation run yet. Trigger an inquiry to generate the Root Cause Analysis report.</p>
+                        </div>
+                        <div class="rca-rendered markdown-body" id="rca-content">
+                            <!-- Dynamically populated markdown -->
+                        </div>
+                        <div class="remediation-box hidden" id="remediation-box">
+                            <h3><i class="fa-solid fa-hammer"></i> Active Remediation Center</h3>
+                            <p>Apply remediation changes recommended by the cost-aware coordinator subagents.</p>
+                            <div class="remediation-buttons">
+                                <button class="action-btn primary" id="apply-btn-b">
+                                    <i class="fa-solid fa-circle-check"></i> Apply GC Tuning Patch (Recommended - $0/mo)
+                                </button>
+                                <button class="action-btn secondary" id="apply-btn-a">
+                                    <i class="fa-solid fa-arrow-up-right-dots"></i> Scale Up memory limits (+$140/mo)
+                                </button>
+                            </div>
+                            <div class="remediation-result hidden" id="remediation-result"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Telemetry & Metrics -->
+                    <div class="tab-content" id="tab-metrics">
+                        <div class="chart-grid">
+                            <div class="chart-container">
+                                <h3>Memory Utilization (vs Pod limits)</h3>
+                                <canvas id="memory-chart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>CPU Utilization (vs Pod limits)</h3>
+                                <canvas id="cpu-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="telemetry-info" id="telemetry-summary">
+                            <p class="placeholder-text">Execute investigation to view real-time metrics.</p>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Logs -->
+                    <div class="tab-content" id="tab-logs">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="terminal-title">Container logs --tail=200</span>
+                        </div>
+                        <pre class="terminal-body" id="logs-terminal">Running logs agent to fetch logs...</pre>
+                    </div>
+
+                    <!-- Tab: Cost -->
+                    <div class="tab-content" id="tab-cost">
+                        <div class="cost-cards-grid">
+                            <div class="cost-card-info">
+                                <h3>Active Node Pool Utilization</h3>
+                                <div class="cost-value" id="current-pool-cost">$420.00/mo</div>
+                                <table class="cost-table">
+                                    <tr>
+                                        <td>Node VM Type:</td>
+                                        <td id="node-vm-type">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Nodes Count:</td>
+                                        <td id="node-count">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Cluster Memory:</td>
+                                        <td id="node-memory">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cluster Memory Allocated:</td>
+                                        <td id="node-allocated">-</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div class="cost-card-info highlight">
+                                <h3>Remediation Cost Analysis</h3>
+                                <p>Comparison of remediation strategies and autoscale risk factor:</p>
+                                <div id="scenarios-list" class="scenarios-list">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Kubernetes Incident Commander Agent &bull; Powered by Gemini Reasoning & Antigravity Orchestration</p>
+    </footer>
+
+    <!-- Application Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
